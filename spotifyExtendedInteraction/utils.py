@@ -208,6 +208,9 @@ def _form_track(app, track_model):
 
     album_field = track_field.get("album")
 
+    if album_field is None:
+        return _form_track(app, track_model.get('item'))
+
     track_artists = _get_artists_from_field(app, track_field.get("artists"))
     album_artists = _get_artists_from_field(
         app, track_field.get("album").get("artists")
@@ -300,6 +303,10 @@ def filter(searching, track_name, artist_name=str()):
 
 def _get_artists_from_field(app, artists_field):
     artists = list()
+
+    if artists_field is None:
+        return artists
+
     for artist_model in artists_field:
         artist = Artist(
             app,
@@ -315,7 +322,7 @@ def _get_artists_from_field(app, artists_field):
 
 
 def _get_tracks_from_playlist(app, tracks_url: str):
-    tracks_request_link = tracks_url + "?access_token=" + app.cache.get("access_token")
+    tracks_request_link = tracks_url + "?access_token=" + app.access_token
     tracks_source: list = loads(requests.get(tracks_request_link).text).get("items")
     tracks = list()
 
