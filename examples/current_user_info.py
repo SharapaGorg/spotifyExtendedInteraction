@@ -1,13 +1,11 @@
-from spotifyExtendedInteraction import SpotifyApp
+from spotifyExtendedInteraction import SpotifyApp, Track
 from personal_config import CLIENT_ID, CLIENT_SECRET, REDIRECT_URI
 
-app = SpotifyApp(client_id=CLIENT_ID,
-                client_secret=CLIENT_SECRET,
-                redirect_uri=REDIRECT_URI)
+app = SpotifyApp(
+    client_id=CLIENT_ID, client_secret=CLIENT_SECRET, redirect_uri=REDIRECT_URI
+)
 
-""" .current_user_playlists() """
-for playlist in app.current_user_playlists():
-    print(playlist['id'])
-    print(playlist['name'])
-    print(playlist['description'])
 
+track_name = 'Nuovi orizzonti'
+track = Track(app=app, name=track_name)
+print(track.name, track.id)
