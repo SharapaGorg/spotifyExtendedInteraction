@@ -17,7 +17,7 @@ class User:
         self.uri = uri
 
     def __repr__(self):
-        return default_repr(self)
+        return _default_repr(self)
 
 class Playlist:
     def __init__(
@@ -54,7 +54,7 @@ class Playlist:
             """
 
     def __repr__(self) -> str:
-        return default_repr(self)
+        return _default_repr(self)
 
 class Artist:
     def __init__(
@@ -75,7 +75,7 @@ class Artist:
 
 
     def __repr__(self) -> str:
-        return default_repr(self)
+        return _default_repr(self)
 
 class Album:
     def __init__(
@@ -114,7 +114,7 @@ class Album:
             pass
 
     def __repr__(self) -> str:
-        return default_repr(self)
+        return _default_repr(self)
 
 
 class Track:
@@ -154,8 +154,7 @@ class Track:
             track_model = filter(searching, track_name=self.name)
             track = _form_track(app, track_model)
 
-            for var in vars(track):
-                self.__setattr__(var, track.__getattribute__(var))
+            _copy_all_vars(track, self)
 
         all_exist = True
         for var in vars(self):
@@ -169,10 +168,17 @@ class Track:
 
         if self.id and not all_exist:
             track = _form_track(app, self.app.track(self.id))
-            print(track, track.name)
+
+
+        if self.href and not all_exist:
+            track_id = self.href.lstrip('https://open.spotify.com/track/')[:22]
+            track = _form_track(app, self.app.track(track_id))
+
+            _copy_all_vars(track, self)
+
 
     def __repr__(self) -> str:
-        return default_repr(self)
+        return _default_repr(self)
 
 
 class SpotifyApp:
@@ -230,7 +236,7 @@ class SpotifyApp:
 
 
     def __repr__(self) -> str:
-        return default_repr(self)
+        return _default_repr(self)
 
 def filter(searching, track_name, artist_name=str()):
     for found_track in searching.get("tracks").get("items"):
@@ -307,7 +313,7 @@ def _form_track(app, track_model):
     return track
 
 
-def type_filter(var_value):
+def _type_filter(var_value):
     result_var = str()
 
     if isinstance(var_value, str):
@@ -317,7 +323,7 @@ def type_filter(var_value):
     elif isinstance(var_value, bool):
         result_var = var_value
     elif isinstance(var_value, list):
-        result_var = var_value.__class__.__name__ + '[' + type_filter(var_value[0]) + ']'
+        result_var = var_value.__class__.__name__ + '[' + _type_filter(var_value[0]) + ']'
     elif var_value is None:
         result_var = var_value
     else:
@@ -325,13 +331,17 @@ def type_filter(var_value):
 
     return result_var
 
-def default_repr(object):
+def _default_repr(object):
     result = str()
     for var in vars(object):
         var_value = object.__getattribute__(var)
-        result_var = type_filter(var_value)
+        result_var = _type_filter(var_value)
 
         result += f"{var}={result_var}, "
     result = result.rstrip(', ')
 
     return f"Track({result})"
+
+def _copy_all_vars(from_object, to_object):
+    for var in vars(from_object):
+        to_object.__setattr__(var, from_object.__getattribute__(var))
