@@ -1,7 +1,8 @@
+from os import write
 import spotipy
 from spotipy import SpotifyOAuth
 from json import loads
-from .utils import _form_user, _form_playlist, _form_track
+from .utils import _form_user, _form_playlist, _form_track, _form_album
 from .utils import _default_repr
 
 
@@ -14,7 +15,8 @@ class SpotifyApp:
         scope=[
             "playlist-modify-public",
             "user-library-modify",
-            "user-read-currently-playing",
+            "user-read-currently-playing"
+            "user-library-read"
         ],
     ):
 
@@ -55,6 +57,16 @@ class SpotifyApp:
         track = _form_track(self, track_model)
         return track
 
+
+    def current_user_saved_albums(self):
+        saved_albums = self.app.current_user_saved_albums()
+        albums = list()
+
+        for saved_album_model in saved_albums.get('items'):
+            saved_album = _form_album(self, saved_album_model.get('album'))
+            albums.append(saved_album)
+
+        return albums
 
     def __repr__(self) -> str:
         return _default_repr(self)

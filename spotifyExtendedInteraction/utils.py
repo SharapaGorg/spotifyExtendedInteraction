@@ -212,9 +212,6 @@ def _form_track(app, track_model):
         return _form_track(app, track_model.get('item'))
 
     track_artists = _get_artists_from_field(app, track_field.get("artists"))
-    album_artists = _get_artists_from_field(
-        app, track_field.get("album").get("artists")
-    )
 
     if added_by_field is not None:
         added_by_user = User(
@@ -227,20 +224,7 @@ def _form_track(app, track_model):
     else:
         added_by_user = None
 
-    track_album = Album(
-        app,
-        album_type=album_field.get("album_type"),
-        href=album_field.get("external_urls").get("spotify"),
-        api_href=album_field.get("href"),
-        id=album_field.get("id"),
-        images=album_field.get("images"),
-        name=album_field.get("name"),
-        release_date=album_field.get("release_date"),
-        release_date_precision=album_field.get("release_date_precision"),
-        total_tracks=album_field.get("total_tracks"),
-        uri=album_field.get("uri"),
-        artists=album_artists,
-    )
+    track_album = _form_album(app, album_field)
 
     track = Track(
         app,
@@ -256,6 +240,29 @@ def _form_track(app, track_model):
         album=track_album,
     )
     return track
+
+
+def _form_album(app, album_model) -> Album:
+    album_artists = _get_artists_from_field(
+        app, album_model.get("artists")
+    )
+
+    track_album = Album(
+        app,
+        album_type=album_model.get("album_type"),
+        href=album_model.get("external_urls").get("spotify"),
+        api_href=album_model.get("href"),
+        id=album_model.get("id"),
+        images=album_model.get("images"),
+        name=album_model.get("name"),
+        release_date=album_model.get("release_date"),
+        release_date_precision=album_model.get("release_date_precision"),
+        total_tracks=album_model.get("total_tracks"),
+        uri=album_model.get("uri"),
+        artists=album_artists,
+    )
+
+    return track_album
 
 
 def _form_playlist(app, playlist_model) -> Playlist:
@@ -343,9 +350,12 @@ def _type_filter(var_value):
     elif isinstance(var_value, bool):
         result_var = var_value
     elif isinstance(var_value, list):
-        result_var = (
-            var_value.__class__.__name__ + "[" + _type_filter(var_value[0]) + "]"
-        )
+        if var_value:
+            result_var = (
+                var_value.__class__.__name__ + "[" + _type_filter(var_value[0]) + "]"
+            )
+        else:
+            result_var = var_value.__class__.__name__
     elif var_value is None:
         result_var = var_value
     else:
