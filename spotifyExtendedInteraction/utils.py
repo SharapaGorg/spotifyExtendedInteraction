@@ -1,23 +1,31 @@
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
 from json import loads
+import requests
+
+from .contants import TRACK_PREFIX
 
 
 class User:
-    id: str
-    name: str
-    href: str
-    api_href: str
-
-    def __init__(self, app, id=str(), api_href=str(), href=str(), uri=str()):
+    def __init__(
+        self,
+        app,
+        display_name=str(),
+        id=str(),
+        api_href=str(),
+        href=str(),
+        uri=str(),
+        followers=int,
+    ):
         self.app = app.app
+        self.display_name = display_name
         self.id = id
         self.api_href = api_href
         self.href = href
         self.uri = uri
+        self.followers = followers
 
     def __repr__(self):
         return _default_repr(self)
+
 
 class Playlist:
     def __init__(
@@ -56,6 +64,10 @@ class Playlist:
     def __repr__(self) -> str:
         return _default_repr(self)
 
+    def __str__(self) -> str:
+        return self.name
+
+
 class Artist:
     def __init__(
         self, app, href=str(), api_href=str(), id=str(), name=str(), uri=str()
@@ -73,9 +85,9 @@ class Artist:
             """
             pass
 
-
     def __repr__(self) -> str:
         return _default_repr(self)
+
 
 class Album:
     def __init__(
@@ -115,6 +127,9 @@ class Album:
 
     def __repr__(self) -> str:
         return _default_repr(self)
+
+    def __str__(self) -> str:
+        return self.name
 
 
 class Track:
@@ -169,100 +184,27 @@ class Track:
         if self.id and not all_exist:
             track = _form_track(app, self.app.track(self.id))
 
+            _copy_all_vars(track, self)
 
         if self.href and not all_exist:
-            track_id = self.href.lstrip('https://open.spotify.com/track/')[:22]
+            track_id = self.href.lstrip(TRACK_PREFIX)[:22]
             track = _form_track(app, self.app.track(track_id))
 
             _copy_all_vars(track, self)
 
-
     def __repr__(self) -> str:
         return _default_repr(self)
 
-
-class SpotifyApp:
-    def __init__(
-        self,
-        client_id,
-        client_secret,
-        redirect_uri,
-        scope="playlist-modify-public",
-    ):
-
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.redirect_uri = redirect_uri
-        self.scope = scope
-
-        self.app = spotipy.Spotify(
-            auth_manager=SpotifyOAuth(
-                scope=self.scope,
-                client_id=self.client_id,
-                client_secret=self.client_secret,
-                redirect_uri=self.redirect_uri,
-            )
-        )
-
-        with open(".cache", "r") as cache:
-            self.cache = loads(cache.read())
-
-    def current_user_playlists(self) -> list[Playlist]:
-        playlists = list()
-
-        for playlist_model in self.app.current_user_playlists().get("items"):
-            tracks: list = self._get_tracks_from_playlist(
-                tracks_url=playlist_model.get("tracks").get("href")
-            )
-
-            playlist = Playlist(
-                self,
-                name=playlist_model.get("name"),
-                description=playlist_model.get("description"),
-                id=playlist_model.get("id"),
-                external_urls=playlist_model.get("external_urls"),
-                api_href=playlist_model.get("href"),
-                images=playlist_model.get("images"),
-                owner=playlist_model.get("owner"),
-                public=playlist_model.get("public"),
-                snapshot_id=playlist_model.get("snapshot_id"),
-                uri=playlist_model.get("uri"),
-                tracks=tracks,
-            )
-
-            playlists.append(playlist)
-
-        return playlists
-
-
-    def __repr__(self) -> str:
-        return _default_repr(self)
-
-def filter(searching, track_name, artist_name=str()):
-    for found_track in searching.get("tracks").get("items"):
-        if found_track["name"].lower() == track_name.lower():
-            return found_track
-
-
-def _get_artists_from_field(app, artists_field):
-    artists = list()
-    for artist_model in artists_field:
-        artist = Artist(
-            app,
-            href=artist_model.get("external_urls").get("spotify"),
-            api_href=artist_model.get("href"),
-            id=artist_model.get("id"),
-            name=artist_model.get("name"),
-            uri=artist_model.get("uri"),
-        )
-        artists.append(artist)
-
-    return artists
+    def __str__(self) -> str:
+        return self.name
 
 
 def _form_track(app, track_model):
     added_by_field = track_model.get("added_by")
-    track_field = track_model
+    if "track" in track_model:
+        track_field = track_model.get("track")
+    else:
+        track_field = track_model
 
     album_field = track_field.get("album")
 
@@ -313,6 +255,77 @@ def _form_track(app, track_model):
     return track
 
 
+def _form_playlist(app, playlist_model) -> Playlist:
+    tracks = _get_tracks_from_playlist(
+        app, tracks_url=playlist_model.get("tracks").get("href")
+    )
+
+    playlist = Playlist(
+        app,
+        name=playlist_model.get("name"),
+        description=playlist_model.get("description"),
+        id=playlist_model.get("id"),
+        external_urls=playlist_model.get("external_urls"),
+        api_href=playlist_model.get("href"),
+        images=playlist_model.get("images"),
+        owner=playlist_model.get("owner"),
+        public=playlist_model.get("public"),
+        snapshot_id=playlist_model.get("snapshot_id"),
+        uri=playlist_model.get("uri"),
+        tracks=tracks,
+    )    
+
+    return playlist
+
+
+def _form_user(app, user_model):
+    user = User(
+        app,
+        display_name=user_model.get("display_name"),
+        href=user_model.get("external_urls").get("spotify"),
+        followers=user_model.get('followers').get('total'),
+        api_href=user_model.get('href'),
+        id=user_model.get('id'),
+        uri=user_model.get('uri')
+    )
+
+    return user
+
+
+def filter(searching, track_name, artist_name=str()):
+    for found_track in searching.get("tracks").get("items"):
+        if found_track["name"].lower() == track_name.lower():
+            return found_track
+
+
+def _get_artists_from_field(app, artists_field):
+    artists = list()
+    for artist_model in artists_field:
+        artist = Artist(
+            app,
+            href=artist_model.get("external_urls").get("spotify"),
+            api_href=artist_model.get("href"),
+            id=artist_model.get("id"),
+            name=artist_model.get("name"),
+            uri=artist_model.get("uri"),
+        )
+        artists.append(artist)
+
+    return artists
+
+
+def _get_tracks_from_playlist(app, tracks_url: str):
+    tracks_request_link = tracks_url + "?access_token=" + app.cache.get("access_token")
+    tracks_source: list = loads(requests.get(tracks_request_link).text).get("items")
+    tracks = list()
+
+    for track_model in tracks_source:
+        track = _form_track(app, track_model)
+        tracks.append(track)
+
+    return tracks
+
+
 def _type_filter(var_value):
     result_var = str()
 
@@ -323,13 +336,16 @@ def _type_filter(var_value):
     elif isinstance(var_value, bool):
         result_var = var_value
     elif isinstance(var_value, list):
-        result_var = var_value.__class__.__name__ + '[' + _type_filter(var_value[0]) + ']'
+        result_var = (
+            var_value.__class__.__name__ + "[" + _type_filter(var_value[0]) + "]"
+        )
     elif var_value is None:
         result_var = var_value
     else:
         result_var = var_value.__class__.__name__
 
     return result_var
+
 
 def _default_repr(object):
     result = str()
@@ -338,9 +354,10 @@ def _default_repr(object):
         result_var = _type_filter(var_value)
 
         result += f"{var}={result_var}, "
-    result = result.rstrip(', ')
+    result = result.rstrip(", ")
 
-    return f"Track({result})"
+    return f"{object.__class__.__name__}({result})"
+
 
 def _copy_all_vars(from_object, to_object):
     for var in vars(from_object):

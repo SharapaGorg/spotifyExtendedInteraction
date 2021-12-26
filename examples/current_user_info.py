@@ -6,6 +6,5 @@ app = SpotifyApp(
 )
 
 
-track_name = 'Nuovi orizzonti'
-track = Track(app=app, name=track_name)
-print(track.name, track.id)
+for playlist in app.current_user_playlists():
+    print(playlist)
