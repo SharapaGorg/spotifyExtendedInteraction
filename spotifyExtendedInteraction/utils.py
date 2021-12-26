@@ -1,22 +1,14 @@
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from dataclasses import dataclass, field
 from json import loads
-from accessify import protected
-import requests
-from inspect import getfullargspec
 
 
-@dataclass
-class UserData:
-    app: str  # SpotifyApp
-    id: str = field(default_factory=str)
-    api_href: str = field(default_factory=str)
-    href: str = field(default_factory=str)
-    uri: str = field(default_factory=str)
+class User:
+    id: str
+    name: str
+    href: str
+    api_href: str
 
-
-class User(UserData):
     def __init__(self, app, id=str(), api_href=str(), href=str(), uri=str()):
         self.app = app.app
         self.id = id
@@ -24,9 +16,9 @@ class User(UserData):
         self.href = href
         self.uri = uri
 
-        
+    def __repr__(self):
+        return default_repr(self)
 
-@dataclass
 class Playlist:
     def __init__(
         self,
@@ -44,7 +36,7 @@ class Playlist:
         uri=str(),
     ):
         self.app = app.app
-        self.name =name
+        self.name = name
         self.description = description
         self.id = id
         self.tracks = tracks
@@ -56,13 +48,14 @@ class Playlist:
         self.snapshot_id = snapshot_id
         self.uri = uri
 
-
         if not id and name:
             """
             searching playlist globally
             """
 
-@dataclass
+    def __repr__(self) -> str:
+        return default_repr(self)
+
 class Artist:
     def __init__(
         self, app, href=str(), api_href=str(), id=str(), name=str(), uri=str()
@@ -80,7 +73,10 @@ class Artist:
             """
             pass
 
-@dataclass
+
+    def __repr__(self) -> str:
+        return default_repr(self)
+
 class Album:
     def __init__(
         self,
@@ -111,14 +107,16 @@ class Album:
         self.total_tracks = total_tracks
         self.uri = uri
 
-
         if not id and name:
             """
             searching album globally
             """
             pass
 
-@dataclass
+    def __repr__(self) -> str:
+        return default_repr(self)
+
+
 class Track:
     def __init__(
         self,
@@ -144,9 +142,10 @@ class Track:
         self.uri = uri
         self.href = href
         self.artists = artists
-        self.album = album 
+        self.album = album
 
-        if not id and name:
+        ignore_vars = ["added_by", "added_at"]
+        if not self.id and self.name:
             """
             searching track globally
             """
@@ -157,6 +156,24 @@ class Track:
 
             for var in vars(track):
                 self.__setattr__(var, track.__getattribute__(var))
+
+        all_exist = True
+        for var in vars(self):
+            if (
+                self.__getattribute__(var) is None
+                and var != "id"
+                and var not in ignore_vars
+            ):
+                all_exist = False
+                break
+
+        if self.id and not all_exist:
+            track = _form_track(app, self.app.track(self.id))
+            print(track, track.name)
+
+    def __repr__(self) -> str:
+        return default_repr(self)
+
 
 class SpotifyApp:
     def __init__(
@@ -211,6 +228,9 @@ class SpotifyApp:
 
         return playlists
 
+
+    def __repr__(self) -> str:
+        return default_repr(self)
 
 def filter(searching, track_name, artist_name=str()):
     for found_track in searching.get("tracks").get("items"):
@@ -285,3 +305,33 @@ def _form_track(app, track_model):
         album=track_album,
     )
     return track
+
+
+def type_filter(var_value):
+    result_var = str()
+
+    if isinstance(var_value, str):
+        result_var = f'"{var_value}"'
+    elif isinstance(var_value, int):
+        result_var = var_value
+    elif isinstance(var_value, bool):
+        result_var = var_value
+    elif isinstance(var_value, list):
+        result_var = var_value.__class__.__name__ + '[' + type_filter(var_value[0]) + ']'
+    elif var_value is None:
+        result_var = var_value
+    else:
+        result_var = var_value.__class__.__name__
+
+    return result_var
+
+def default_repr(object):
+    result = str()
+    for var in vars(object):
+        var_value = object.__getattribute__(var)
+        result_var = type_filter(var_value)
+
+        result += f"{var}={result_var}, "
+    result = result.rstrip(', ')
+
+    return f"Track({result})"
