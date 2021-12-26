@@ -18,31 +18,16 @@ class UserData:
 
 class User(UserData):
     def __init__(self, app, id=str(), api_href=str(), href=str(), uri=str()):
-        super().__init__(app, id, api_href, href, uri)
-
         self.app = app.app
+        self.id = id
+        self.api_href = api_href
+        self.href = href
+        self.uri = uri
 
-        if not id:  # search User globally
-            pass
-
+        
 
 @dataclass
-class PlaylistData:
-    app: str  # SpotifyApp
-    name: str = field(default_factory=str)
-    description: str = field(default_factory=str)
-    id: str = field(default_factory=str)
-    tracks: list = field(default_factory=list)
-    external_urls: dict = field(default_factory=dict)
-    api_href: str = field(default_factory=str)
-    images: list = field(default_factory=list)
-    owner: dict = field(default_factory=dict)
-    public: bool = field(default_factory=False)
-    snapshot_id: str = field(default_factory=str)
-    uri: str = field(default_factory=str)
-
-
-class Playlist(PlaylistData):
+class Playlist:
     def __init__(
         self,
         app,
@@ -58,63 +43,45 @@ class Playlist(PlaylistData):
         snapshot_id=str(),
         uri=str(),
     ):
-        super().__init__(
-            app,
-            name,
-            description,
-            id,
-            tracks,
-            external_urls,
-            api_href,
-            images,
-            owner,
-            public,
-            snapshot_id,
-            uri,
-        )
-
         self.app = app.app
+        self.name =name
+        self.description = description
+        self.id = id
+        self.tracks = tracks
+        self.external_urls = external_urls
+        self.api_href = api_href
+        self.images = images
+        self.owner = owner
+        self.public = public
+        self.snapshot_id = snapshot_id
+        self.uri = uri
 
-        if not id:  # search playlist globally
-            pass
 
+        if not id and name:
+            """
+            searching playlist globally
+            """
 
 @dataclass
-class ArtistData:
-    app: str  # SpotifyApp
-    href: field(default_factory=str)
-    api_href: field(default_factory=str)
-    id: field(default_factory=str)
-    name: field(default_factory=str)
-    uri: field(default_factory=str)
-
-
-class Artist(ArtistData):
+class Artist:
     def __init__(
         self, app, href=str(), api_href=str(), id=str(), name=str(), uri=str()
     ):
-        super().__init__(app, href, api_href, id, name, uri)
-
         self.app = app.app
+        self.href = href
+        self.api_href = api_href
+        self.id = id
+        self.name = name
+        self.uri = uri
 
+        if not id and name:
+            """
+            searching artist globally
+            """
+            pass
 
 @dataclass
-class AlbumData:
-    app: str  # SpotifyApp
-    album_type: str = field(default_factory=str)
-    artists: list[Artist] = field(default_factory=list)
-    href: str = field(default_factory=str)
-    api_href: str = field(default_factory=str)
-    id: str = field(default_factory=str)
-    images: list = field(default_factory=list)
-    name: str = field(default_factory=str)
-    release_date: str = field(default_factory=str)
-    release_date_precision: str = field(default_factory=str)
-    total_tracks: int = field(default_factory=int)
-    uri: str = field(default_factory=str)
-
-
-class Album(AlbumData):
+class Album:
     def __init__(
         self,
         app,
@@ -130,23 +97,26 @@ class Album(AlbumData):
         total_tracks=int,
         uri=str(),
     ):
-        super().__init__(
-            app,
-            album_type,
-            artists,
-            href,
-            api_href,
-            id,
-            images,
-            name,
-            release_date,
-            release_date_precision,
-            total_tracks,
-            uri,
-        )
 
-        self.app = app.app
+        self.app = app
+        self.album_type = album_type
+        self.artists = artists
+        self.href = href
+        self.api_href = api_href
+        self.id = id
+        self.images = images
+        self.name = name
+        self.release_date = release_date
+        self.release_date_precision = release_date_precision
+        self.total_tracks = total_tracks
+        self.uri = uri
 
+
+        if not id and name:
+            """
+            searching album globally
+            """
+            pass
 
 @dataclass
 class Track:
@@ -177,6 +147,10 @@ class Track:
         self.album = album 
 
         if not id and name:
+            """
+            searching track globally
+            """
+
             searching = self.app.search(q="track:" + self.name, type="track")
             track_model = filter(searching, track_name=self.name)
             track = _form_track(app, track_model)
